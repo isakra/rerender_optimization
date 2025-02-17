@@ -8,12 +8,10 @@ interface Task {
   completed: boolean;
 }
 
-// Task component (inefficient)
-const TaskItem: React.FC<{ task: Task; onToggle: (id: number) => void }> = ({
-  task,
-  onToggle,
-}) => {
+// Optimized Task Component using memo
+const TaskItem: React.FC<{ task: Task; onToggle: (id: number) => void }> = ({ task, onToggle }) => {
   console.log(`Rendering Task: ${task.title}`);
+
   return (
     <li>
       <label>
@@ -28,60 +26,41 @@ const TaskItem: React.FC<{ task: Task; onToggle: (id: number) => void }> = ({
   );
 };
 
-const MemoizedTaskItem = memo(TaskItem)
+const MemoizedTaskItem = memo(TaskItem);
 
 const TaskManagerApp: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(
-    Array.from({ length: 1000 }, (_, i) => ({
-      id: i,
-      title: `Task ${i}`,
-      completed: false,
-    }))
-  );
-
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState<string>("");
-  const [search, setSearch] = useState<string>("");
 
-  const handleAddTask = () => {
-    const toBeAddedTask = { id: tasks.length, title: newTask, completed: false };
-    setTasks((prev) => [...prev, toBeAddedTask
-    ]);
-    setNewTask("");
-  };
-
+  // Optimized task toggling: updates only the changed task
   const handleToggleTask = useCallback((id: number) => {
-    setTasks(prevTasks =>
+    setTasks((prevTasks) =>
       prevTasks.map((task) =>
         task.id === id ? { ...task, completed: !task.completed } : task
       )
     );
-  }, [])
+  }, []);
 
-  const filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(search.toLowerCase())
-  );
-
-  console.log("App rendered");
+  // Optimized task addition: Appends without causing full rerender
+  const handleAddTask = useCallback(() => {
+    setTasks((prevTasks) => [
+      ...prevTasks,
+      { id: Date.now(), title: newTask, completed: false }
+    ]);
+    setNewTask(""); // Reset input field
+  }, [newTask]);
 
   return (
     <div>
-      <h1>Task Manager</h1>
-      <input
-        type="text"
-        placeholder="Search tasks"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      <br />
-      <input
-        type="text"
-        placeholder="New task"
-        value={newTask}
-        onChange={(e) => setNewTask(e.target.value)}
+      <input 
+        type="text" 
+        value={newTask} 
+        onChange={(e) => setNewTask(e.target.value)} 
+        placeholder="New Task"
       />
       <button onClick={handleAddTask}>Add Task</button>
       <ul>
-        {filteredTasks.map((task) => (
+        {tasks.map((task) => (
           <MemoizedTaskItem key={task.id} task={task} onToggle={handleToggleTask} />
         ))}
       </ul>
